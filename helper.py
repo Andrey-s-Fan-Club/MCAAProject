@@ -1,5 +1,6 @@
 import numpy as np
-import networkx as nx
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def generate_x(size):
@@ -21,3 +22,11 @@ def generate_graph(x, a, b):
             adjacency_mat[i, j] = value
             adjacency_mat[j, i] = value
     return adjacency_mat
+
+
+def visualise_overlap(overlap_array, nb_iters, nb_experiment):
+    ax = sns.lineplot(x=list(range(nb_iters)), y=overlap_array)
+    plt.suptitle(f"Average overlap over {nb_experiment} experiments")
+    ax.set_xlabel("Iterations")
+    ax.set_ylabel("Overlap")
+    plt.show()
