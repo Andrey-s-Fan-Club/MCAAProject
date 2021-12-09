@@ -27,7 +27,7 @@ def compute_acceptance_proba_fast(x, v, n, adj, a, b):
     mask[v] = False
 
     h_row_masked = get_h_row(adj, a, b, n, v).reshape(-1)
-    return - 2 * x[v] * np.sum(x[mask] * h_row_masked[mask])
+    return - x[v] * np.sum(x[mask] * h_row_masked[mask])
 
 
 def get_h_ij(adj, i, j, a, b, n):
