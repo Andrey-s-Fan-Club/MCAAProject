@@ -10,6 +10,7 @@ def generate_x(size):
 def generate_graph(x, a, b):
     n = len(x)
     adjacency_mat = np.zeros((n, n))
+
     for i in range(n):
         for j in range(i + 1, n):
             prod = x[i] * x[j]
