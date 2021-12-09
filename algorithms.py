@@ -72,6 +72,7 @@ def run_experiment(nb, a, b, x_star, algorithm, n0=0, nb_iter=200, nb_exp=100):
     for j in tqdm(range(nb_exp)):
         if x_star is not None:
             adj = generate_graph(x_star, a, b)
+
         new_x, overlap_list = algorithm(adj, a, b, nb, nb_iter, x_star, n0)
         #sum_x += new_x
         overlap[j, :] = np.array(overlap_list)
@@ -84,10 +85,10 @@ def run_experiment(nb, a, b, x_star, algorithm, n0=0, nb_iter=200, nb_exp=100):
 
 def houdayer_step(cur_x1, cur_x2):
     y = cur_x1 * cur_x2
-    diff_index = np.argwhere(y == -1)
-    all_pairs = it.combinations(diff_index)
+    diff_index = np.argwhere(y == -1).reshape(-1).tolist()
+    all_pairs = list(it.combinations(diff_index, 2))
     graph_c = nx.convert.from_edgelist(all_pairs)
-    rand_comp = np.random.choice(diff_index, 1)
+    rand_comp = np.random.choice(diff_index, 1)[0]
     connected_comp = nx.algorithms.components.node_connected_component(graph_c, rand_comp)
 
     list_index = list(connected_comp)
@@ -106,8 +107,8 @@ def houdayer(adj, a, b, nb, nb_iter, x_star, *args):
     for i in range(nb_iter):
         cur_x1, cur_x2 = houdayer_step(cur_x1, cur_x2)
 
-        cur_x2 = metropolis_step(adj, a, b, cur_x2, nb)
         cur_x1 = metropolis_step(adj, a, b, cur_x1, nb)
+        cur_x2 = metropolis_step(adj, a, b, cur_x2, nb)
 
         if x_star is not None:
             overlap_list.append(overlap(cur_x1, x_star))
@@ -115,13 +116,13 @@ def houdayer(adj, a, b, nb, nb_iter, x_star, *args):
     return cur_x1, overlap_list
 
 
-def mixed_houdayer(adj, a, b, nb, nb_iter_tot, x_star, n0):
+def mixed_houdayer(adj, a, b, nb, nb_iter, x_star, n0):
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
 
     overlap_list = []
 
-    for i in nb_iter_tot:
+    for i in nb_iter:
         if i % n0 == 0:
             cur_x1, cur_x2 = houdayer_step(cur_x1, cur_x2)
 
