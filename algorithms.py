@@ -16,7 +16,7 @@ def compute_acceptance_proba_fast(x, v, n, adj, a, b):
     mask[v] = False
 
     h_row_masked = get_h_row(adj, a, b, n, v).reshape(-1)
-    return - x[v] * np.sum(x[mask] * h_row_masked[mask])
+    return min(1.0, np.exp(- x[v] * np.sum(x[mask] * h_row_masked[mask])))
 
 
 def get_h_row(adj, a, b, n, v):
@@ -100,7 +100,8 @@ def houdayer(adj, a, b, nb, nb_iter, x_star, *args):
     overlap_list = []
 
     for i in range(nb_iter):
-        cur_x1, cur_x2 = houdayer_step(cur_x1, cur_x2, adj)
+        if np.any(cur_x1 != cur_x2):
+            cur_x1, cur_x2 = houdayer_step(cur_x1, cur_x2, adj)
 
         cur_x1 = metropolis_step(adj, a, b, cur_x1, nb)
         cur_x2 = metropolis_step(adj, a, b, cur_x2, nb)
@@ -120,7 +121,8 @@ def mixed_houdayer(adj, a, b, nb, nb_iter, x_star, n0):
 
     for i in range(nb_iter):
         if i % n0 == 0:
-            cur_x1, cur_x2 = houdayer_step(cur_x1, cur_x2, adj)
+            if np.any(cur_x1 != cur_x2):
+                cur_x1, cur_x2 = houdayer_step(cur_x1, cur_x2, adj)
 
         cur_x2 = metropolis_step(adj, a, b, cur_x2, nb)
         cur_x1 = metropolis_step(adj, a, b, cur_x1, nb)
