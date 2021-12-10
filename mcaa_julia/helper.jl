@@ -40,4 +40,10 @@ function visualize_overlap(overlap_array::Vector{Float64}, nb_exp::Integer)
         ylabel="Avg overlap")
 end
 
-                
+
+function plot_overlap_r(overlap_r::Vector{Float64}, range_r::Vector{Float64})
+    plot(range_r, overlap_r, xaxis=:log,
+        title="Average overlap over $(nb_exp) experiments",
+        xlabel="r",
+        ylabel="Avg overlap")
+end
