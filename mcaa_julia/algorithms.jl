@@ -1,4 +1,5 @@
 using StatsBase
+using Combinatorics
 
 include("helper.jl")
 
@@ -50,6 +51,16 @@ function metropolis(adj::BitMatrix, a::Integer, b::Integer, nb::Integer, nb_iter
     
     return cur_x, overlap_vector
 end
+
+
+function houdayer_step(cur_x1::Vector{Int8}, cur_x2::Vector{Int8})
+    y = cur_x1 .* cur_x2
+    
+    diff_index = findall(y .== -1)
+    all_pairs = combinations(diff_index, 2)
+    
+    
+    
 
 function run_experiment(nb::Integer, a::Integer, b::Integer, x_star::Vector{Int8}, algorithm::Function, nb_iter::Integer=1000, nb_exp::Integer=100, n0::Integer=0)
     overlaps = zeros(nb_exp, nb_iter)

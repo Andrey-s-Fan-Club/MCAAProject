@@ -83,13 +83,15 @@ def run_experiment(nb, a, b, x_star, algorithm, n0=0, nb_iter=200, nb_exp=100):
     return overlap.mean(axis=0)
 
 
-def houdayer_step(cur_x1, cur_x2):
+def houdayer_step(cur_x1, cur_x2, adj):
     y = cur_x1 * cur_x2
     diff_index = np.argwhere(y == -1).reshape(-1).tolist()
-    all_pairs = list(it.combinations(diff_index, 2))
-    graph_c = nx.convert.from_edgelist(all_pairs)
+    same_index = np.argwhere(y == 1).reshape(-1).tolist()
     rand_comp = np.random.choice(diff_index, 1)[0]
-    connected_comp = nx.algorithms.components.node_connected_component(graph_c, rand_comp)
+
+    observed_graph = nx.convert_matrix.from_numpy_matrix(adj)
+    observed_graph.remove_nodes_from(same_index)
+    connected_comp = nx.algorithms.components.node_connected_component(observed_graph, rand_comp)
 
     list_index = list(connected_comp)
 
