@@ -1,5 +1,5 @@
 using StatsBase
-using Combinatorics
+using LightGraphs
 
 include("helper.jl")
 
@@ -8,13 +8,13 @@ function overlap(x::Vector{Int8}, x_start::Vector{Int8})
 end
 
 
-function get_h_row(adj::BitMatrix, a::Integer, b::Integer, n::Integer, v::Integer)
+function get_h_row(adj::BitMatrix, a::Real, b::Real, n::Integer, v::Integer)
     # Broadcast operations with dot
     return 0.5 .* (log(a / b) .* adj[v, :] .+ log((n - a) / (n - b)) .* (1 .- adj[v, :]))
 end
 
 
-function compute_acceptance_proba(x::Vector{Int8}, v::Integer, n::Integer, adj::BitMatrix, a::Integer, b::Integer)
+function compute_acceptance_proba(x::Vector{Int8}, v::Integer, n::Integer, adj::BitMatrix, a::Real, b::Real)
     mask = trues(length(x))
     mask[v] = false
     
@@ -23,7 +23,7 @@ function compute_acceptance_proba(x::Vector{Int8}, v::Integer, n::Integer, adj::
 end
 
 
-function metropolis_step(adj::BitMatrix, a::Integer, b::Integer, cur_x::Vector{Int8}, nb::Integer)
+function metropolis_step(adj::BitMatrix, a::Real, b::Real, cur_x::Vector{Int8}, nb::Integer)
     comp = sample(1:nb)
     proposed_move = copy(cur_x)
     proposed_move[comp] = -proposed_move[comp]
@@ -38,7 +38,7 @@ function metropolis_step(adj::BitMatrix, a::Integer, b::Integer, cur_x::Vector{I
 end
 
 
-function metropolis(adj::BitMatrix, a::Integer, b::Integer, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, arg=nothing)
+function metropolis(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, arg=nothing)
     cur_x = generate_x(nb)
     overlap_vector = Vector{Float64}(undef, nb_iter)
     
@@ -53,16 +53,26 @@ function metropolis(adj::BitMatrix, a::Integer, b::Integer, nb::Integer, nb_iter
 end
 
 
-function houdayer_step(cur_x1::Vector{Int8}, cur_x2::Vector{Int8})
+function houdayer_step(cur_x1::Vector{Int8}, cur_x2::Vector{Int8}, adj::BitMatrix)
     y = cur_x1 .* cur_x2
     
     diff_index = findall(y .== -1)
-    all_pairs = combinations(diff_index, 2)
+    same_index = findall(y .== 1)
+    
+    rand_comp = sample(diff_index, 1)
+    
+    # Set entire row to 0 for all nodes with y = 1
+    adj_cop = copy(adj)
+    N = length(cur_x1)
+    adj_copy[same_index, :] = zeros(N, N)
+    
+    observed_graph = Graph(adj_copy)
     
     
+end    
     
 
-function run_experiment(nb::Integer, a::Integer, b::Integer, x_star::Vector{Int8}, algorithm::Function, nb_iter::Integer=1000, nb_exp::Integer=100, n0::Integer=0)
+function run_experiment(nb::Integer, a::Real, b::Real, x_star::Vector{Int8}, algorithm::Function, nb_iter::Integer=1000, nb_exp::Integer=100, n0::Integer=0)
     overlaps = zeros(nb_exp, nb_iter)
 
     Threads.@threads for j = 1:nb_exp

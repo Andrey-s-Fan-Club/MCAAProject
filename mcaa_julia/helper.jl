@@ -6,12 +6,12 @@ function generate_x(size::Integer)
     return sample(Vector{Int8}([-1, 1]), size)
 end
 
-function generate_graph(x::Vector{Int8}, a::Integer, b::Integer)
+function generate_graph(x::Vector{Int8}, a::Real, b::Real)
     n = length(x)
     adjacency_mat = falses(n, n)
     
-    b_n = (b / n)
-    a_n = (a / n
+    b_n = b / n
+    a_n = a / n
         
     # Indexing start at 1 and n is included
     Threads.@threads for i = 1:n
