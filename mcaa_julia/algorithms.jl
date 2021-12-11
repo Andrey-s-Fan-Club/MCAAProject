@@ -147,7 +147,7 @@ end
 
 
 function overlap_r(x_star::Vector{Int8}, algorithm::Function, nb::Integer, nb_iter::Integer, nb_exp::Integer, d::Integer=3, n0::Integer=0, nb_r::Integer=60)
-    range_r = exp10.(range(-10, 0, nb_r))
+    range_r = exp10.(range(-5, 0, nb_r))
     
     overlap_r = zeros(nb_r)
     
