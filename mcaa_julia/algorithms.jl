@@ -1,5 +1,5 @@
 using StatsBase
-using LightGraphs
+using Graphs
 
 include("helper.jl")
 
@@ -50,6 +50,16 @@ function metropolis(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Inte
     end
     
     return cur_x, overlap_vector
+end
+
+
+function metropolis_comp(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer)
+    cur_x = generate_x(nb)
+    for i = 1:nb_iter
+        cur_x = metropolis_step(adj, a, b, cur_x, nb)
+    end
+    
+    return cur_x
 end
 
 
@@ -146,8 +156,20 @@ function run_experiment(nb::Integer, a::Real, b::Real, x_star::Vector{Int8}, alg
 end
 
 
+function competition(adj::BitMatrix, a::Real, b::Real, nb_iter::Integer, nb_exp::Integer, nb::Integer)
+    x_hat = Matrix{Int8}(undef, nb, nb_exp)
+    
+    Threads.@threads for i = 1:nb_exp
+        x_hat[:, i] = metropolis_comp(adj, a, b, nb, nb_iter)
+        
+    end
+    
+    return x_hat
+end
+
+
 function overlap_r(x_star::Vector{Int8}, algorithm::Function, nb::Integer, nb_iter::Integer, nb_exp::Integer, d::Integer=3, n0::Integer=0, nb_r::Integer=60)
-    range_r = exp10.(range(-5, 0, nb_r))
+    range_r = exp10.(range(-4, 0, nb_r))
     
     overlap_r = zeros(nb_r)
     
