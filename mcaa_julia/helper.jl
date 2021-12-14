@@ -37,17 +37,32 @@ function generate_graph(x::Vector{Int8}, a::Real, b::Real)
 end
 
 
-function visualize_overlap(overlap_array::Vector{Float64}, nb_exp::Integer, x_vlines::Vector{Int64}, N::Integer, a::Real, b::Real, n0::Integer=nothing)
-    if n0 !== nothing
-        title = "Average overlap over $(nb_exp) experiments\nN=$(N), a=$(a), b=$(b), n0=$(n0)"
+function visualize_overlap(overlap_array_100::Vector{Float64}, overlap_array_500::Vector{Float64}, overlap_array_1000::Vector{Float64}, overlap_array_5000::Vector{Float64}, nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real, n0::Integer=0)
+    
+    if n0 !== 0
+        title = "Average overlap over $(nb_exp) experiments\na=$(a), b=$(b), n0=$(n0)"
     else
-        title = "Average overlap over $(nb_exp) experiments\nN=$(N), a=$(a), b=$(b)"
+        title = "Average overlap over $(nb_exp) experiments\na=$(a), b=$(b)"
     end
     
-    plot(overlap_array,
+    plot(overlap_array_100,
         title=title,
         xlabel="Iterations of the MC",
-        ylabel="Avg overlap")
+        ylabel="Avg overlap",
+        label="N=100"
+    )
+    
+    plot!(overlap_array_500,
+        label="N=500"
+    )
+    
+    plot!(overlap_array_1000,
+        label="N=1000"
+    )
+    
+    plot!(overlap_array_5000,
+        label="N=5000"
+    )
     
     # Plots vertical lines at different values
     vline!(x_vlines)
