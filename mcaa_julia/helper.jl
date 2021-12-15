@@ -4,12 +4,12 @@ using Plots
 using Clustering
 
 
-function generate_x(size::Integer)
+function generate_x(size::Int64)
     return sample(Vector{Int8}([-1, 1]), size)
 end
 
 
-function generate_graph(x::Vector{Int8}, a::Real, b::Real)
+function generate_graph(x::Vector{Int8}, a::Float64, b::Float64)
     n = length(x)
     adjacency_mat = falses(n, n)
     
@@ -120,17 +120,22 @@ end
 
 
 function visualize_n0(
-        overlap_array_500::Vector{Float64},
+        overlap_array_100::Vector{Float64},
+        overlap_array_1000::Vector{Float64},
         overlap_array_5000::Vector{Float64},
         overlap_array_10000::Vector{Float64},
         overlap_array_20000::Vector{Float64},
-        nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real, n0::Integer=0)
+        nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real)
     
-    plot(overlap_array_500,
-        title=title,
+    plot(overlap_array_100,
+        title="Average overlap over $(nb_exp) experiments\na=$(a), b=$(b)",
         xlabel="Iterations of the MC",
         ylabel="Avg overlap",
-        label="n0=500"
+        label="n0=100"
+    )
+    
+    plot!(overlap_array_1000,
+        label="n0=1000"
     )
     
     plot!(overlap_array_5000,
