@@ -37,7 +37,12 @@ function generate_graph(x::Vector{Int8}, a::Real, b::Real)
 end
 
 
-function visualize_overlap(overlap_array_100::Vector{Float64}, overlap_array_500::Vector{Float64}, overlap_array_1000::Vector{Float64}, overlap_array_5000::Vector{Float64}, nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real, n0::Integer=0)
+function visualize_overlap(
+        overlap_array_100::Vector{Float64},
+        overlap_array_500::Vector{Float64},
+        overlap_array_1000::Vector{Float64},
+        overlap_array_5000::Vector{Float64},
+        nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real, n0::Integer=0)
     
     if n0 !== 0
         title = "Average overlap over $(nb_exp) experiments\na=$(a), b=$(b), n0=$(n0)"
@@ -65,20 +70,85 @@ function visualize_overlap(overlap_array_100::Vector{Float64}, overlap_array_500
     )
     
     # Plots vertical lines at different values
-    vline!(x_vlines)
+    vline!(x_vlines, label="Thresholds")
+    plot!(size=(1000, 600), legend=:bottomright, margin=5Plots.mm)
 end
 
 
-function plot_overlap_r(overlap_r::Vector{Float64}, range_r::Vector{Float64}, d::Real)
+function plot_overlap_r(
+        overlap_r_100::Vector{Float64},
+        overlap_r_500::Vector{Float64},
+        overlap_r_1000::Vector{Float64},
+        overlap_r_5000::Vector{Float64},
+        range_r::Vector{Float64},
+        d::Real)
+    
     # Theoretical phase transition (see computations)
     r_c = (sqrt(d) - 1) / (sqrt(d) + 1)
     
-    plot(range_r, overlap_r, xaxis=:log,
+    plot(range_r, overlap_r_100, xaxis=:log,
         title="Average overlap over $(nb_exp) experiments",
         xlabel="r",
-        ylabel="Avg overlap")
+        ylabel="Avg overlap",
+        label="N=100"
+    )
     
-    vline!([r_c], xaxis=:log)
+    plot!(range_r, overlap_r_500, xaxis=:log,
+        title="Average overlap over $(nb_exp) experiments",
+        xlabel="r",
+        ylabel="Avg overlap",
+        label="N=500"
+    )
+    
+    plot!(range_r, overlap_r_1000, xaxis=:log,
+        title="Average overlap over $(nb_exp) experiments",
+        xlabel="r",
+        ylabel="Avg overlap",
+        label="N=1000"
+    )
+    
+    plot!(range_r, overlap_r_5000, xaxis=:log,
+        title="Average overlap over $(nb_exp) experiments",
+        xlabel="r",
+        ylabel="Avg overlap",
+        label="N=5000"
+    )
+    
+    vline!([r_c], xaxis=:log, label="Theoretical transition")
+    plot!(size=(1000, 600), legend=:bottomleft, margin=5Plots.mm)
+end
+
+
+function visualize_n0(
+        overlap_array_500::Vector{Float64},
+        overlap_array_5000::Vector{Float64},
+        overlap_array_10000::Vector{Float64},
+        overlap_array_20000::Vector{Float64},
+        nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real, n0::Integer=0)
+    
+    plot(overlap_array_500,
+        title=title,
+        xlabel="Iterations of the MC",
+        ylabel="Avg overlap",
+        label="n0=500"
+    )
+    
+    plot!(overlap_array_5000,
+        label="n0=5000"
+    )
+    
+    plot!(overlap_array_10000,
+        label="n0=10'000"
+    )
+    
+    plot!(overlap_array_20000,
+        label="n0=20'000"
+    )
+    
+    # Plots vertical lines at different values
+    vline!(x_vlines, label="Threshold")
+    plot!(size=(1000, 600), legend=:bottomright, margin=5Plots.mm)
+    
 end
 
 

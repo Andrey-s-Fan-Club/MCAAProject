@@ -3,18 +3,18 @@ using Graphs
 
 include("helper.jl")
 
-function overlap(x::Vector{Int8}, x_start::Vector{Int8})
+@inline function overlap(x::Vector{Int8}, x_start::Vector{Int8})
     return abs(mean(x .* x_star))
 end
 
 
-function get_h_row(adj::BitMatrix, a::Real, b::Real, n::Integer, v::Integer)
+@inline function get_h_row(adj::BitMatrix, a::Real, b::Real, n::Integer, v::Integer)
     # Broadcast operations with dot
     return 0.5 .* (log(a / b) .* adj[v, :] .+ log((n - a) / (n - b)) .* (1 .- adj[v, :]))
 end
 
 
-function compute_acceptance_proba(x::Vector{Int8}, v::Integer, n::Integer, adj::BitMatrix, a::Real, b::Real)
+@inline function compute_acceptance_proba(x::Vector{Int8}, v::Integer, n::Integer, adj::BitMatrix, a::Real, b::Real)
     mask = trues(length(x))
     mask[v] = false
     
@@ -23,7 +23,7 @@ function compute_acceptance_proba(x::Vector{Int8}, v::Integer, n::Integer, adj::
 end
 
 
-function metropolis_step(adj::BitMatrix, a::Real, b::Real, cur_x::Vector{Int8}, nb::Integer)
+@inline function metropolis_step(adj::BitMatrix, a::Real, b::Real, cur_x::Vector{Int8}, nb::Integer)
     comp = sample(1:nb)
     proposed_move = copy(cur_x)
     proposed_move[comp] = -proposed_move[comp]
@@ -38,7 +38,7 @@ function metropolis_step(adj::BitMatrix, a::Real, b::Real, cur_x::Vector{Int8}, 
 end
 
 
-function metropolis(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, arg=nothing)
+@inline function metropolis(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, arg=nothing)
     cur_x = generate_x(nb)
     overlap_vector = Vector{Float64}(undef, nb_iter)
     
@@ -53,7 +53,7 @@ function metropolis(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Inte
 end
 
 
-function metropolis_comp(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer)
+@inline function metropolis_comp(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer)
     cur_x = generate_x(nb)
     for i = 1:nb_iter
         cur_x = metropolis_step(adj, a, b, cur_x, nb)
@@ -63,7 +63,7 @@ function metropolis_comp(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter:
 end
 
 
-function houdayer_step(cur_x1::Vector{Int8}, cur_x2::Vector{Int8}, adj::BitMatrix)
+@inline function houdayer_step(cur_x1::Vector{Int8}, cur_x2::Vector{Int8}, adj::BitMatrix)
     y = cur_x1 .* cur_x2
     
     diff_index = findall(y .== -1)
@@ -93,7 +93,7 @@ function houdayer_step(cur_x1::Vector{Int8}, cur_x2::Vector{Int8}, adj::BitMatri
 end
 
 
-function houdayer(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, arg=nothing)
+@inline function houdayer(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, arg=nothing)
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
     
@@ -116,7 +116,7 @@ function houdayer(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Intege
 end
 
 
-function houdayer_mixed(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, n0::Integer)
+@inline function houdayer_mixed(adj::BitMatrix, a::Real, b::Real, nb::Integer, nb_iter::Integer, x_star::Vector{Int8}, n0::Integer)
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
     
@@ -168,8 +168,8 @@ function competition(adj::BitMatrix, a::Real, b::Real, nb_iter::Integer, nb_exp:
 end
 
 
-function overlap_r(x_star::Vector{Int8}, algorithm::Function, nb::Integer, nb_iter::Integer, nb_exp::Integer, d::Integer=3, n0::Integer=0, nb_r::Integer=60)
-    range_r = exp10.(range(-4, 0, nb_r))
+function overlap_r(x_star::Vector{Int8}, algorithm::Function, nb::Integer, nb_iter::Integer, nb_exp::Integer, d::Integer=3, n0::Integer=0, nb_r::Integer=10)
+    range_r = exp10.(range(-3, 0, nb_r))
     
     overlap_r = zeros(nb_r)
     
