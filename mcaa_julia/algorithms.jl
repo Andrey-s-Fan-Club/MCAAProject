@@ -1,5 +1,6 @@
 using StatsBase
 using Graphs
+using ProgressBars
 
 include("helper.jl")
 
@@ -53,14 +54,14 @@ end
 function metropolis_comp(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64)
     cur_x = generate_x(nb)
     for i = 1:nb_iter
-        metropolis_step!(adj, a, b, cur_x, nb)
+        @inbounds metropolis_step!(adj, a, b, cur_x, nb)
     end
     
     return cur_x
 end
 
 
-@inline function houdayer_step!(cur_x1::Vector{Int8}, cur_x2::Vector{Int8}, adj::BitMatrix)
+@inline function houdayer_step!(cur_x1::Vector{Int8}, cur_x2::Vector{Int8}, adj::BitMatrix, N::Int64)
     y = cur_x1 .* cur_x2
     
     diff_index = findall(y .== -1)
@@ -70,19 +71,15 @@ end
     
     # Set entire row to 0 for all nodes with y = 1
     adj_copy = copy(adj)
-    N = length(cur_x1)
     mask = zeros(length(same_index), N)
     adj_copy[same_index, :] = mask
     adj_copy[:, same_index] = transpose(mask)
     
-    observed_graph = Graphs.Graph(adj_copy)
-    
     # Find connected components
     label = zeros(N)
-    label = Graphs.connected_components!(label, observed_graph)
-    label_rand_comp = @view label[rand_comp]
+    Graphs.connected_components!(label, Graphs.Graph(adj_copy))
     
-    cluster = findall(label .== label_rand_comp)
+    cluster = findall(label .== @view label[rand_comp])
     cur_x1[cluster] = (-1) .* @view cur_x1[cluster]
     cur_x2[cluster] = (-1) .* @view cur_x2[cluster]
 end
@@ -96,7 +93,7 @@ end
     
     for i = 1:nb_iter
         if !all(cur_x1 .== cur_x2)
-            houdayer_step!(cur_x1, cur_x2, adj)
+            houdayer_step!(cur_x1, cur_x2, adj, nb)
         end
         
         metropolis_step!(adj, a, b, cur_x1, nb)
@@ -119,7 +116,7 @@ end
     
     for i = 1:nb_iter
         if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
-            houdayer_step!(cur_x1, cur_x2, adj)
+            houdayer_step!(cur_x1, cur_x2, adj, N)
         end
         
         metropolis_step!(adj, a, b, cur_x1, nb)
@@ -135,6 +132,7 @@ end
 
 
 @inline function houdayer_custom(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, steps::Dict{Float64, Int64})
+    
     # Decompose into different for loops for the different n0
     
     return 1
@@ -149,7 +147,7 @@ end
        
     for i = 1:nb_iter
         if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
-            houdayer_step!(cur_x1, cur_x2, adj)
+            houdayer_step!(cur_x1, cur_x2, adj, N)
         end
         
         metropolis_step!(adj, a, b, cur_x1, nb)
@@ -165,7 +163,7 @@ end
 function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, algorithm::Function, nb_iter::Int64=1000, nb_exp::Int64=100, n0::Int64=0)
     overlaps = zeros(nb_exp, nb_iter)
 
-    Threads.@threads for j = eachindex(overlaps[1, :])
+    Threads.@threads for j = ProgressBar(1:nb_exp)
         if x_star != nothing
             adj = generate_graph(x_star, a, b)
         end
