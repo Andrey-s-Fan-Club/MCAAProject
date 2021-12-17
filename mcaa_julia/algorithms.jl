@@ -162,8 +162,10 @@ end
     
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
-       
-    for i = 1:nb_iter
+    
+    nb_votes = 10000
+    
+    for i = 1:(nb_iter-nb_votes)
         if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
             houdayer_step!(cur_x1, cur_x2, adj, N)
         end
@@ -173,7 +175,25 @@ end
         
     end
     
-    return cur_x1
+    votes1 = Matrix{Int8}(undef, nb, nb_votes)
+    votes2 = Matrix{Int8}(undef, nb, nb_votes)
+    
+    for (idx, i) = enumerate((nb_iter-nb_votes+1):nb_iter)
+        if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
+            houdayer_step!(cur_x1, cur_x2, adj, N)
+        end
+        
+        metropolis_step!(adj, a, b, cur_x1, nb)
+        metropolis_step!(adj, a, b, cur_x2, nb)
+        
+        votes1[:, idx] = cur_x1
+        votes2[:, idx] = cur_x2
+    end
+    
+    cur_x1 = majority_vote(votes1)
+    cur_x2 = majority_vote(votes2)
+    
+    return most_likely(cur_x1, cur_x2)
     
 end
 
@@ -212,11 +232,12 @@ function run_custom(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, nb_
 end
 
 
-function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_exp::Int64, nb::Int64)
+function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_exp::Int64, nb::Int64, n0::Int64)
     x_hat = Matrix{Int8}(undef, nb, nb_exp)
     
     Threads.@threads for i = eachindex(x_hat[1, :])
-        @inbounds x_hat[:, i] = metropolis_comp(adj, a, b, nb, nb_iter)
+        #@inbounds x_hat[:, i] = metropolis_comp(adj, a, b, nb, nb_iter)
+        @inbounds x_hat[:, i] = houdayer_mixed_comp(adj, a, b, nb, nb_iter, n0)
     end
     
     return x_hat
