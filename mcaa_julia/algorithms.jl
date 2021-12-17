@@ -20,7 +20,8 @@ end
     mask = trues(length(x))
     mask[v] = false
     
-    return min(1, exp(- x[v] * sum(x[mask] .* get_h_row(adj, a, b, n, v)[mask])))
+    # Don't need to do the min with 1 with our implementation
+    return exp(- x[v] * sum(x[mask] .* get_h_row(adj, a, b, n, v)[mask]))
 end
 
 
