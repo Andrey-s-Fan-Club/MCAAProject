@@ -37,6 +37,19 @@ function generate_graph(x::Vector{Int8}, a::Float64, b::Float64)
 end
 
 
+function most_likely(cur_x1::Vector{Int64}, cur_x2::Vector{Int64})
+    
+    mean1 = abs(sum(cur_x1))
+    mean2 = abs(sum(cur_x2))
+    
+    if mean1 < mean2
+        return cur_x1
+    else
+        return cur_x2
+    end    
+end
+
+
 function visualize_overlap(
         overlap_array_1::Vector{Float64},
         overlap_array_2::Vector{Float64},
@@ -176,15 +189,15 @@ end
 
 
 function majority_vote(x_hat_matrix::Matrix{Int8})
-    means = mean(x_hat_matrix, dims=2)
-    for i = 1:length(means)
-        if means[i] >= 0
-            means[i] = 1
+    sums = sum(x_hat_matrix, dims=2)
+    for i = 1:length(sums)
+        if sums[i] >= 0
+            sums[i] = 1
         else
-            means[i] = -1
+            sums[i] = -1
         end
     end
     
-    return means
+    return sums[:, 1]
 end
     
