@@ -37,7 +37,7 @@ function generate_graph(x::Vector{Int8}, a::Float64, b::Float64)
 end
 
 
-function most_likely(cur_x1::Vector{Int64}, cur_x2::Vector{Int64})
+function choose_x(cur_x1::Vector{Int64}, cur_x2::Vector{Int64})
     
     mean1 = abs(sum(cur_x1))
     mean2 = abs(sum(cur_x2))
