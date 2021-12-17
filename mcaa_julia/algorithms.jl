@@ -131,12 +131,30 @@ end
 end
 
 
-@inline function houdayer_custom(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, steps::Dict{Float64, Int64})
+@inline function houdayer_custom(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, steps::Vector{Int64}, n0s::Vector{Int64})
+    
+    cur_x1 = generate_x(nb)
+    cur_x2 = generate_x(nb)
+    
+    overlap_vector = Vector{Float64}(undef, nb_iter)
     
     # Decompose into different for loops for the different n0
-    
-    return 1
-    
+    nb_interval = length(steps)
+    for l = 2:nb_interval
+        for i = steps[l-1]:steps[l]
+           if mod(i, n0s[l-1]) == 0 && (!all(cur_x1 .== cur_x2))
+               houdayer_step!(cur_x1, cur_x2, adj, N)
+            end
+        
+            metropolis_step!(adj, a, b, cur_x1, nb)
+            metropolis_step!(adj, a, b, cur_x2, nb)
+
+            if x_star != nothing
+                overlap_vector[i] = overlap(cur_x1, x_star)
+            end
+        end
+    end
+    return cur_x1, overlap_vector
 end
 
 
@@ -163,12 +181,29 @@ end
 function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, algorithm::Function, nb_iter::Int64=1000, nb_exp::Int64=100, n0::Int64=0)
     overlaps = zeros(nb_exp, nb_iter)
 
-    Threads.@threads for j = ProgressBar(1:nb_exp)
+    Threads.@threads for j = 1:nb_exp
         if x_star != nothing
             adj = generate_graph(x_star, a, b)
         end
         
         new_x, overlap_list = algorithm(adj, a, b, nb, nb_iter, x_star, n0)
+        
+        overlaps[j, :] = overlap_list
+    end
+    
+    return mean(overlaps, dims=1)
+end
+        
+        
+function run_custom(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, nb_iter::Int64, nb_exp::Int64, steps::Vector{Int64}, n0s::Vector{Int64})
+    overlaps = zeros(nb_exp, nb_iter)
+
+    Threads.@threads for j = 1:nb_exp
+        if x_star != nothing
+            adj = generate_graph(x_star, a, b)
+        end
+        
+        new_x, overlap_list = houdayer_custom(adj, a, b, nb, nb_iter, x_star, steps, n0s)
         
         overlaps[j, :] = overlap_list
     end
