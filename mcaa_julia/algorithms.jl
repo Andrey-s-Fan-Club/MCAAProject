@@ -163,7 +163,7 @@ end
 function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, algorithm::Function, nb_iter::Int64=1000, nb_exp::Int64=100, n0::Int64=0)
     overlaps = zeros(nb_exp, nb_iter)
 
-    Threads.@threads for j = ProgressBar(1:nb_exp)
+    Threads.@threads for j = 1:nb_exp
         if x_star != nothing
             adj = generate_graph(x_star, a, b)
         end
