@@ -9,6 +9,24 @@ include("helper.jl")
 end
 
 
+function hamiltonian(x::Vector{Int8}, h::Matrix{Float64})
+    
+    N = length(x)
+    sum = 0.0
+    for i = 1:(N-1)
+        for j = (i+1):N
+            sum += h[i, j] * x[i] * x[j]
+        end
+    end
+    return -sum
+end
+
+
+function compute_h(adj::BitMatrix, a::Float64, b::Float64, n::Int64)
+    return 0.5 .* (log(a / b) .* adj .+ log((n - a) / (n - b)) .* (1 .- adj))
+end
+
+
 @fastmath @inline function get_h_row(adj::BitMatrix, a::Float64, b::Float64, n::Int64, v::Int64)
     # Broadcast operations with dot
     return 0.5 .* (log(a / b) .* adj[v, :] .+ log((n - a) / (n - b)) .* (1 .- adj[v, :]))
@@ -16,19 +34,20 @@ end
 
 
 # Use views to avoid copies of array[mask] in the return expression
-@fastmath @views function compute_acceptance_proba(x::Vector{Int8}, v::Int64, n::Int64, adj::BitMatrix, a::Float64, b::Float64)
+@fastmath @views function compute_acceptance_proba(x::Vector{Int8}, v::Int64, h::Matrix{Float64})
     mask = trues(length(x))
     mask[v] = false
     
-    return min(1, exp(- x[v] * sum(x[mask] .* get_h_row(adj, a, b, n, v)[mask])))
+    # Don't need to do the min with 1 with our implementation
+    return exp(- x[v] * sum(x[mask] .* h[v, mask]))
 end
 
 
-@inline function metropolis_step!(adj::BitMatrix, a::Float64, b::Float64, cur_x::Vector{Int8}, nb::Int64)
+@inline function metropolis_step!(h::Matrix{Float64}, cur_x::Vector{Int8}, nb::Int64)
     
     comp = sample(1:nb)
     
-    acc = compute_acceptance_proba(cur_x, comp, nb, adj, a, b)
+    acc = compute_acceptance_proba(cur_x, comp, h)
     
     if rand(Uniform(0, 1)) <= acc
         cur_x[comp] = -cur_x[comp]
@@ -36,12 +55,12 @@ end
 end
 
 
-function metropolis(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, arg=nothing)
+function metropolis(h::Matrix{Float64}, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, a::Float64=nothing, b::Float64=nothing, adj::BitMatrix=nothing, n0::Int64=nothing)
     cur_x = generate_x(nb)
     overlap_vector = Vector{Float64}(undef, nb_iter)
     
     for i = 1:nb_iter
-        metropolis_step!(adj, a, b, cur_x, nb)
+        metropolis_step!(h, cur_x, nb)
         if x_star != nothing
             overlap_vector[i] = overlap(cur_x, x_star)
         end
@@ -51,10 +70,10 @@ function metropolis(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::
 end
 
 
-function metropolis_comp(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64)
+function metropolis_comp(h::Matrix{Float64}, nb::Int64, nb_iter::Int64, adj::BitMatrix=nothing, a::Float64=nothing, b::Float64=nothing, n0::Int64=nothing)
     cur_x = generate_x(nb)
     for i = 1:nb_iter
-        @inbounds metropolis_step!(adj, a, b, cur_x, nb)
+        @inbounds metropolis_step!(h, cur_x, nb)
     end
     
     return cur_x
@@ -85,7 +104,7 @@ end
 end
 
 
-@inline function houdayer(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, arg=nothing)
+@inline function houdayer(h::Matrix{Float64}, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, a::Float64, b::Float64, adj::BitMatrix, arg::Int64=nothing)
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
     
@@ -96,19 +115,19 @@ end
             houdayer_step!(cur_x1, cur_x2, adj, nb)
         end
         
-        metropolis_step!(adj, a, b, cur_x1, nb)
-        metropolis_step!(adj, a, b, cur_x2, nb)
+        metropolis_step!(h, cur_x1, nb)
+        metropolis_step!(h, cur_x2, nb)
         
         if x_star != nothing
             overlap_vector[i] = overlap(cur_x1, x_star)
         end
     end
     
-    return cur_x1, overlap_vector
+    return hamiltonian(cur_x1) < hamiltonian(cur_x2) ? cur_x1 : cur_x2, overlap_vector
 end
 
 
-@inline function houdayer_mixed(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, n0::Int64)
+@inline function houdayer_mixed(h::Matrix{Float64}, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, a::Float64, b::Float64, adj::BitMatrix, n0::Int64)
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
     
@@ -119,43 +138,81 @@ end
             houdayer_step!(cur_x1, cur_x2, adj, N)
         end
         
-        metropolis_step!(adj, a, b, cur_x1, nb)
-        metropolis_step!(adj, a, b, cur_x2, nb)
+        metropolis_step!(h, cur_x1, nb)
+        metropolis_step!(h, cur_x2, nb)
         
         if x_star != nothing
             overlap_vector[i] = overlap(cur_x1, x_star)
         end
     end
     
+    return hamiltonian(cur_x1) < hamiltonian(cur_x2) ? cur_x1 : cur_x2, overlap_vector
+end
+
+
+@inline function houdayer_custom(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, steps::Vector{Int64}, n0s::Vector{Int64})
+    
+    cur_x1 = generate_x(nb)
+    cur_x2 = generate_x(nb)
+    
+    overlap_vector = Vector{Float64}(undef, nb_iter)
+    
+    # Decompose into different for loops for the different n0
+    nb_interval = length(steps)
+    for l = 2:nb_interval
+        for i = steps[l-1]:steps[l]
+           if mod(i, n0s[l-1]) == 0 && (!all(cur_x1 .== cur_x2))
+               houdayer_step!(cur_x1, cur_x2, adj, N)
+            end
+        
+            metropolis_step!(adj, a, b, cur_x1, nb)
+            metropolis_step!(adj, a, b, cur_x2, nb)
+
+            if x_star != nothing
+                overlap_vector[i] = overlap(cur_x1, x_star)
+            end
+        end
+    end
     return cur_x1, overlap_vector
 end
 
 
-@inline function houdayer_custom(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, x_star::Vector{Int8}, steps::Dict{Float64, Int64})
-    
-    # Decompose into different for loops for the different n0
-    
-    return 1
-    
-end
-
-
-@inline function houdayer_mixed_comp(adj::BitMatrix, a::Float64, b::Float64, nb::Int64, nb_iter::Int64, n0::Int64)
+@inline function houdayer_mixed_comp(h::Matrix{Float64}, nb::Int64, nb_iter::Int64, adj::BitMatrix, a::Float64, b::Float64, n0::Int64)
     
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
-       
-    for i = 1:nb_iter
+    
+    nb_votes = 20000
+    
+    for i = 1:(nb_iter-nb_votes)
         if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
             houdayer_step!(cur_x1, cur_x2, adj, N)
         end
         
-        metropolis_step!(adj, a, b, cur_x1, nb)
-        metropolis_step!(adj, a, b, cur_x2, nb)
+        metropolis_step!(h, cur_x1, nb)
+        metropolis_step!(h, cur_x2, nb)
         
     end
     
-    return cur_x1
+    votes1 = Matrix{Int8}(undef, nb, nb_votes)
+    votes2 = Matrix{Int8}(undef, nb, nb_votes)
+    
+    for (idx, i) = enumerate((nb_iter-nb_votes+1):nb_iter)
+        if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
+            houdayer_step!(cur_x1, cur_x2, adj, N)
+        end
+        
+        metropolis_step!(h, cur_x1, nb)
+        metropolis_step!(h, cur_x2, nb)
+        
+        votes1[:, idx] = cur_x1
+        votes2[:, idx] = cur_x2
+    end
+    
+    cur_x1 = majority_vote(votes1)
+    cur_x2 = majority_vote(votes2)
+    
+    return hamiltonian(cur_x1) < hamiltonian(cur_x2) ? cur_x1 : cur_x2
     
 end
 
@@ -167,8 +224,26 @@ function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8},
         if x_star != nothing
             adj = generate_graph(x_star, a, b)
         end
+            
+        h = compute_h(adj, a, b, nb)        
+        new_x, overlap_list = algorithm(h, nb, nb_iter, x_star, a, b, adj, n0)
         
-        new_x, overlap_list = algorithm(adj, a, b, nb, nb_iter, x_star, n0)
+        overlaps[j, :] = overlap_list
+    end
+    
+    return mean(overlaps, dims=1)
+end
+        
+        
+function run_custom(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, nb_iter::Int64, nb_exp::Int64, steps::Vector{Int64}, n0s::Vector{Int64})
+    overlaps = zeros(nb_exp, nb_iter)
+
+    Threads.@threads for j = 1:nb_exp
+        if x_star != nothing
+            adj = generate_graph(x_star, a, b)
+        end
+        
+        new_x, overlap_list = houdayer_custom(adj, a, b, nb, nb_iter, x_star, steps, n0s)
         
         overlaps[j, :] = overlap_list
     end
@@ -177,14 +252,19 @@ function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8},
 end
 
 
-function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_exp::Int64, nb::Int64)
+function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_exp::Int64, nb::Int64, n0::Int64)
     x_hat = Matrix{Int8}(undef, nb, nb_exp)
-    
+    hamiltonians = Vector{Float64}(undef, nb_exp)
+    h = compute_h(adj, a, b, nb)
+        
     Threads.@threads for i = eachindex(x_hat[1, :])
-        @inbounds x_hat[:, i] = metropolis_comp(adj, a, b, nb, nb_iter)
+        @inbounds x_hat[:, i] = metropolis_comp(h, nb, nb_iter, adj, a, b, n0)
+        #@inbounds x_hat[:, i] = houdayer_mixed_comp(h, nb, nb_iter, adj, a, b, n0)
+        hamiltonians[i] = hamiltonian(x_hat[:, i], h)
     end
     
-    return x_hat
+    # Return x estimate with the lowest energy
+    return x_hat[:, argmin(hamiltonians)]
 end
 
 
