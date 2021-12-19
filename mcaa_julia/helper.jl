@@ -58,7 +58,7 @@ function visualize_overlap(
         nb_exp::Integer, x_vlines::Vector{Int64}, a::Real, b::Real, names::Vector{String}, algorithm::String, n0::Integer=0)
     
     if n0 !== 0
-        title = "Average overlap over $(nb_exp) experiments\na=$(a), b=$(b), n0=$(n0)"
+        title = "Average overlap over $(nb_exp) experiments\na=$(a), b=$(b), n0=$(n0) "
     else
         title = "Average overlap over $(nb_exp) experiments\na=$(a), b=$(b)"
     end
@@ -73,18 +73,21 @@ function visualize_overlap(
         ylabel="Avg overlap",
         label="N="*names[1]
     )
-    
-    plot!(overlap_array_2,
-        label="N="*names[2]
-    )
-    
-    plot!(overlap_array_3,
-        label="N="*names[3]
-    )
-    
-    plot!(overlap_array_4,
-        label="N="*names[4]
-    )
+    if length(overlap_array_2)>0
+        plot!(overlap_array_2,
+            label="N="*names[2]
+        )
+    end
+    if length(overlap_array_3)>0
+        plot!(overlap_array_3,
+            label="N="*names[3]
+        )
+    end
+    if length(overlap_array_4)>0
+        plot!(overlap_array_4,
+            label="N="*names[4]
+        )
+    end
     
     # Plots vertical lines at different values
     if length(x_vlines)>0
@@ -95,10 +98,10 @@ end
 
 
 function plot_overlap_r(
-        overlap_r_100::Vector{Float64},
-        overlap_r_500::Vector{Float64},
-        overlap_r_1000::Vector{Float64},
-        overlap_r_5000::Vector{Float64},
+        overlap_r_1::Vector{Float64},
+        overlap_r_2::Vector{Float64},
+        overlap_r_3::Vector{Float64},
+        overlap_r_4::Vector{Float64},
         range_r::Vector{Float64},
         d::Real, 
         names::Vector{String}, 
@@ -109,27 +112,33 @@ function plot_overlap_r(
     
     sup_title=""
     if length(algorithm)>0
-        sup_title=algorithm
+        sup_title="("*algorithm*")"
     end
     
-    plot(range_r, overlap_r_100, xaxis=:log,
-        title="Average overlap over $(nb_exp) experiments"*sup_title,
+    plot(range_r, overlap_r_1, xaxis=:log,
+        title="Average overlap over $(nb_exp) experiments "*sup_title,
         xlabel="r",
         ylabel="Avg overlap",
         label="N="*names[1]
     )
     
-    plot!(range_r, overlap_r_500, xaxis=:log,
+    if length(overlap_r_2)>0
+        plot!(range_r, overlap_r_2, xaxis=:log,
         label="N="*names[2]
     )
+    end
     
-    plot!(range_r, overlap_r_1000, xaxis=:log,
+    if length(overlap_r_3)>0
+        plot!(range_r, overlap_r_3, xaxis=:log,
         label="N="*names[3]
-    )
+        )
+    end
     
-    plot!(range_r, overlap_r_5000, xaxis=:log,
+    if length(overlap_r_4)>0
+        plot!(range_r, overlap_r_4, xaxis=:log,
         label="N="*names[4]
     )
+    end
     
     vline!([r_c], xaxis=:log, label="Theoretical transition")
     plot!(size=(1000, 600), legend=:bottomleft, margin=5Plots.mm)
