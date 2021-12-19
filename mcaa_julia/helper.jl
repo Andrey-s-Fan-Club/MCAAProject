@@ -183,6 +183,31 @@ function visualize_n0(
 end
 
 
+function plot_comparisons(
+        overlap_metropolis_700::Vector{Float64},
+        overlap_houdayer_700::Vector{Float64},
+        overlap_houdayer_mixed_700::Vector{Float64},
+        nb_exp::Int64)
+    
+    plot(overlap_houdayer_700,
+        title="Average overlap over $(nb_exp) experiments, N=700",
+        xlabel="Iterations of the MC",
+        ylabel="Avg overlap",
+        label="Houdayer"
+    )
+    
+    plot!(overlap_metropolis_700,
+        label="Metropolis"
+    )
+    
+    plot!(overlap_houdayer_mixed_700,
+        label="Houdayer Mixed"
+    )
+    
+    plot!(size=(1000, 600), legend=:bottomright, margin=5Plots.mm)
+end
+
+
 function kmeans_clustering(x_hat_matrix::Matrix{Int8})
     # Group into 2 cluters
     res = kmeans(x_hat_matrix, 2)

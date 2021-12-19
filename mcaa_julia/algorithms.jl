@@ -123,7 +123,7 @@ end
         end
     end
     
-    return cur_x1, overlap_vector
+    return hamiltonian(cur_x1) < hamiltonian(cur_x2) ? cur_x1 : cur_x2, overlap_vector
 end
 
 
@@ -258,8 +258,8 @@ function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_
     h = compute_h(adj, a, b, nb)
         
     Threads.@threads for i = eachindex(x_hat[1, :])
-        #@inbounds x_hat[:, i] = metropolis_comp(h, nb, nb_iter, adj, a, b, n0)
-        @inbounds x_hat[:, i] = houdayer_mixed_comp(h, nb, nb_iter, adj, a, b, n0)
+        @inbounds x_hat[:, i] = metropolis_comp(h, nb, nb_iter, adj, a, b, n0)
+        #@inbounds x_hat[:, i] = houdayer_mixed_comp(h, nb, nb_iter, adj, a, b, n0)
         hamiltonians[i] = hamiltonian(x_hat[:, i], h)
     end
     
