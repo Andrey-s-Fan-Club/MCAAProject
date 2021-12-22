@@ -207,7 +207,6 @@ function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8},
         
         overlaps[j, :] = overlap_list
     end
-    print(size(overlaps))
     
     return mean(overlaps, dims=1)
 end
