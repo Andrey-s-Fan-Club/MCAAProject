@@ -181,8 +181,8 @@ end
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
     
-    nb_votes = 25000
-    nb_factor = 50000
+    nb_votes = ceil(Int64, nb_iter * 0.15 * 2500.0 / nb)
+    nb_factor = ceil(Int64, nb_iter * 0.3 * 2500.0 / nb)
     
     for i = 1:(nb_iter - nb_factor)
         if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
@@ -191,7 +191,7 @@ end
         
         metropolis_step_factor!(h, cur_x1, nb, 1.0)
         metropolis_step_factor!(h, cur_x2, nb, 1.0)
-        
+              
     end
     
     for i = (nb_iter - nb_factor + 1):(nb_iter - nb_votes)
@@ -208,15 +208,15 @@ end
     votes2 = Matrix{Int8}(undef, nb, nb_votes)
     
     for (idx, i) = enumerate((nb_iter-nb_votes+1):nb_iter)
-        if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
-            houdayer_step!(cur_x1, cur_x2, adj, N)
-        end
+        #if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
+        #    houdayer_step!(cur_x1, cur_x2, adj, N)
+        #end
         
         metropolis_step_factor!(h, cur_x1, nb, 2.0)
         metropolis_step_factor!(h, cur_x2, nb, 2.0)
         
-        votes1[:, idx] = cur_x1
-        votes2[:, idx] = cur_x2
+        votes1[:, idx] = copy(cur_x1)
+        votes2[:, idx] = copy(cur_x2)
     end
     
     cur_x1 = majority_vote(votes1)
@@ -251,16 +251,14 @@ function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_
     hamiltonians = Vector{Float64}(undef, nb_exp)
     h = compute_h(adj, a, b, nb)
     
-    limit = ceil(Int64, ratio_factor*nb_iter)
-    
     Threads.@threads for i = eachindex(x_hat[1, :])
-        @inbounds x_hat[:, i] = houdayer_mixed_comp(h, nb, nb_iter, adj, a, b, n0, limit)
+        @inbounds x_hat[:, i] = houdayer_mixed_comp(h, nb, nb_iter, adj, a, b, n0)
         hamiltonians[i] = hamiltonian(x_hat[:, i], h)
     end
     
     # Return x estimate with the lowest energy
     min_ham_idx = argmin(hamiltonians)
-    print("Minimum Hamiltonian among $(nb_exp) experiments : $(hamiltonians[min_ham_idx])")
+    print("Minimum Hamiltonian among $(nb_exp) experiments : $(hamiltonians[min_ham_idx])\n")
     return x_hat[:, min_ham_idx]
 end
 
