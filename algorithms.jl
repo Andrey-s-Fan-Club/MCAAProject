@@ -47,11 +47,33 @@ end
 end
 
 
+# Use views to avoid copies of array[mask] in the return expression
+@fastmath @views function compute_acceptance_proba_factor(x::Vector{Int8}, v::Int64, h::Matrix{Float64}, factor::Float64)
+    mask = trues(length(x))
+    mask[v] = false
+    
+    # Don't need to do the min with 1 with our implementation
+    return exp(- factor * x[v] * sum(x[mask] .* h[v, mask]))
+end
+
+
 @inline function metropolis_step!(h::Matrix{Float64}, cur_x::Vector{Int8}, nb::Int64, factor::Bool)
     
     comp = sample(1:nb)
     
     acc = compute_acceptance_proba(cur_x, comp, h, factor)
+    
+    if rand(Uniform(0, 1)) <= acc
+        cur_x[comp] = -cur_x[comp]
+    end
+end
+
+
+@inline function metropolis_step_factor!(h::Matrix{Float64}, cur_x::Vector{Int8}, nb::Int64, factor::Float64)
+    
+    comp = sample(1:nb)
+    
+    acc = compute_acceptance_proba_factor(cur_x, comp, h, factor)
     
     if rand(Uniform(0, 1)) <= acc
         cur_x[comp] = -cur_x[comp]
@@ -159,15 +181,26 @@ end
     cur_x1 = generate_x(nb)
     cur_x2 = generate_x(nb)
     
-    nb_votes = 20000
+    nb_votes = 25000
+    nb_factor = 50000
     
-    for i = 1:(nb_iter-nb_votes)
+    for i = 1:(nb_iter - nb_factor)
         if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
             houdayer_step!(cur_x1, cur_x2, adj, N)
         end
         
-        metropolis_step!(h, cur_x1, nb, false)
-        metropolis_step!(h, cur_x2, nb, false)
+        metropolis_step_factor!(h, cur_x1, nb, 1.0)
+        metropolis_step_factor!(h, cur_x2, nb, 1.0)
+        
+    end
+    
+    for i = (nb_iter - nb_factor + 1):(nb_iter - nb_votes)
+        if mod(i, n0) == 0 && (!all(cur_x1 .== cur_x2))
+            houdayer_step!(cur_x1, cur_x2, adj, N)
+        end
+        
+        metropolis_step_factor!(h, cur_x1, nb, 2.0)
+        metropolis_step_factor!(h, cur_x2, nb, 2.0)
         
     end
     
@@ -179,8 +212,8 @@ end
             houdayer_step!(cur_x1, cur_x2, adj, N)
         end
         
-        metropolis_step!(h, cur_x1, nb, true)
-        metropolis_step!(h, cur_x2, nb, true)
+        metropolis_step_factor!(h, cur_x1, nb, 2.0)
+        metropolis_step_factor!(h, cur_x2, nb, 2.0)
         
         votes1[:, idx] = cur_x1
         votes2[:, idx] = cur_x2
@@ -195,7 +228,7 @@ end
 
 
 function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8}, algorithm::Function, nb_iter::Int64=1000, nb_exp::Int64=100, n0::Int64=0)
-    overlaps = zeros(nb_exp, nb_iter)
+    overlaps = zeros(nb_iter, nb_exp)
 
     Threads.@threads for j = 1:nb_exp
         if x_star != nothing
@@ -205,10 +238,10 @@ function run_experiment(nb::Int64, a::Float64, b::Float64, x_star::Vector{Int8},
         h = compute_h(adj, a, b, nb)        
         new_x, overlap_list = algorithm(h, nb, nb_iter, x_star, a, b, adj, n0)
         
-        overlaps[j, :] = overlap_list
+        overlaps[:, j] = overlap_list
     end
     
-    return mean(overlaps, dims=1)
+    return mean(overlaps, dims=2)
 end
 
 
@@ -221,7 +254,6 @@ function competition(adj::BitMatrix, a::Float64, b::Float64, nb_iter::Int64, nb_
     limit = ceil(Int64, ratio_factor*nb_iter)
     
     Threads.@threads for i = eachindex(x_hat[1, :])
-        #@inbounds x_hat[:, i] = metropolis_comp(h, nb, nb_iter, adj, a, b, n0, limit)
         @inbounds x_hat[:, i] = houdayer_mixed_comp(h, nb, nb_iter, adj, a, b, n0, limit)
         hamiltonians[i] = hamiltonian(x_hat[:, i], h)
     end
